@@ -1,47 +1,67 @@
-% rename data files
-function [] = renameDataFiles(subjName, expDat)
+% re-name all the data files in the data folder
 
-%% modify subject name and experiment date
+subjList = {'JB', 'JYZ', 'NC', 'HY'};
+subjNum  = [23, 14, 10, 36];
+nSubj    = length(subjList);
+subjID   = {};
 
-% Example:
-% subjName = '--';
-% date     = '20160417';
+% create subject ID:
+for k = 1 : nSubj
+    subjID{k} = sprintf('wl_subj0%d', subjNum(k));
+end
 
-%% find data location
+%% paths
 
-prjDir = fullfile('~', 'matlab', 'git', 'CriticalSpacing');
-datDir = fullfile(prjDir, 'data');
+prjDir  = fullfile('/Volumes', 'server', 'Projects', 'crowdingAnatomy');
+datDir  = fullfile(prjDir, 'data', 'raw');
+current = pwd;
+
 cd(datDir)
 
-%% load data names
+%% create data file name
 
-txtStr = sprintf('*%s*', subjName);
-matStr = sprintf('%s.mat', txtStr);
-txtStr = sprintf('%s.txt', txtStr);
-f      = dir(matStr);
-tx     = dir(txtStr);
-
-for k = 1 : length(f)
-    file{k} = f(k).name;
-    txt{k}  = tx(k).name;
+for iSub = 1 : nSubj
+    nameStr = sprintf('*%s*', subjList{iSub});
+    matStr  = sprintf('%s.mat', nameStr);
+    txtStr  = sprintf('%s.txt', nameStr);
+    
+    f       = dir(matStr);
+    tx      = dir(txtStr);
+    
+    % load each file and check its side, exx, and direction
+    for k = 1 : length(f)
+        file{k} = f(k).name;
+        txt{k}  = tx(k).name;
+        
+        clear oo dat ecc fixLoc radTang
+        a       = load(file{k});
+        dat     = a.oo;
+        ecc     = dat(1).eccentricityDeg;
+        fixLoc  = dat(1).fixationLocation;
+        radTang = dat(1).radialOrTangential;
+        
+        if strcmp(fixLoc, 'left'),
+            side = 'right';
+        elseif strcmp(fixLoc, 'right'),
+            side = 'left';
+        elseif strcmp(fixLoc, 'center')
+            side = fixLoc;
+        else
+            error('Unidentifiable fix Loc');
+        end
+        
+        % create new name
+        newName     = sprintf('%s%s%d%s', subjID{iSub}, side, ecc, radTang);
+        newMatName  = sprintf('%s.mat', newName);
+        newTextName = sprintf('%s.txt', newName);
+        
+        % rename the current file
+        movefile(file{k}, newMatName);
+        movefile(txt{k},  newTextName);
+       
+    end
 end
 
-%% new names
+%% go back to original directory
 
-side = {'right', 'right', 'left', 'left', 'left', 'right', 'center'};
-ecc  = [8, 4, 8, 4, 8, 8, 0];
-d    = {'tangential', 'radial', 'tangential', 'radial', 'radial', 'radial', 'radial'};
-
-for k = 1 : length(files)
-    newFileName = sprintf('%s%s%d%s%s.mat', subjName, side{k}, ecc(k), d{k}, date);
-    newTextName = sprintf('%s%s%d%s%s.txt', subjName, side{k}, ecc(k), d{k}, date);
-    movefile(file{k}, newFileName)
-    movefile(txt{k}, newTextName)
-end
-
-%% go back to the project directory
-
-cd(prjDir)
-
-end
-
+cd(current)

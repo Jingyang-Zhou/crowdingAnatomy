@@ -1,0 +1,224 @@
+% nVoxelsV1Vn
+% surface area plot in temporal subjects
+
+%% Predefined variables
+
+subjNums = [1, 14, 23, 24, 30, 31];
+expNums  = [1, 1, 1, 1, 2, 2];
+dispTx   = @(s) fprintf('[nVoxelsV1V3]: %s', s);
+roiList  = {'V1', 'V2', 'V3', 'hV4', 'VO', 'LO', 'TO'};
+
+
+%% paths and directories
+
+if ~exist('temporalUtils'),
+    temporalUtils = fullfile('/Volumes', 'server', 'Projects', 'Temporal integration', 'temporalUtils');
+    addpath(genpath(temporalUtils))
+end
+
+meshLoc = fullfile('/Volumes', 'server', 'Projects', 'Anatomy');
+prjLoc  = fullfile('/Volumes', 'server', 'Projects', 'crowdingAnatomy');
+matLoc  = fullfile(prjLoc, 'data');
+
+%% secondary variables
+
+nSubj   = length(subjNums);
+nRoi    = length(roiList);
+roi     = {};
+saLeft  = nan(nSubj, nRoi);
+saRight = nan(size(saLeft));
+cJet    = parula(nSubj);
+
+% create roi to be analyzed
+for k = 1 : nRoi
+    roi{k} = sprintf('bilateral%sEcc2to10', roiList{k});
+    dispTx(sprintf('ROI to be analyzed : %s\n', roi{k}))
+end
+
+%% Compute surface area
+
+currentLoc = pwd;
+
+for k = 1 : nSubj
+    subjID = gotoSubject(subjNums(k), expNums(k));
+    dispTx(pwd)
+    
+    % open gray view
+    mrvCleanWorkspace;
+    gray = mrVista('3');
+    gray = viewSet(gray, 'current dt', 'Averages');
+    
+    for iRoi = 1 : nRoi
+        roiFileName = sprintf('%s.mat', roi{iRoi});
+        gray = loadROI(gray, roiFileName, 1, [], 0, 1);
+        
+        % left and right mesh directory
+        meshDir{1} = fullfile(meshLoc, subjID, 'Left', '3DMeshes', 'leftUnsmoothed.mat');
+        meshDir{2} = fullfile(meshLoc, subjID, 'Right', '3DMeshes', 'rightUnsmoothed.mat');
+        
+        for hemi = 1 : 2
+            gray = meshLoad(gray, meshDir{hemi}, 0);
+            % re-compute vertex
+            MSH = viewGet(gray, 'Mesh');
+            vertexGrayMap = mrmMapVerticesToGray( meshGet(MSH, 'initialvertices'), ...
+                viewGet(gray, 'nodes'), viewGet(gray, 'mmPerVox'), viewGet(gray, 'edges') );
+            MSH = meshSet(MSH, 'vertexgraymap', vertexGrayMap);
+            gray = viewSet(gray, 'Mesh', MSH);
+            
+            clear MSH vertexGrayMap
+            
+            % compute surface area of the roi
+            saHemi{hemi}(k, iRoi) = roiSurfaceArea(gray)
+            % delete mesh
+            gray = meshDelete(gray, inf);
+        end
+    end
+    close all
+end
+
+cd(currentLoc)
+
+%% save data
+
+save(fullfile(matLoc, 'surfaceSizeVista'), 'saHemi', 'subjNums', 'roiList')
+
+%% sorting subjects
+
+v1Average = (saHemi{1}(:, 1) + saHemi{2}(:, 1))./2;
+[reOrderedV1, order] = sort(v1Average);
+
+newSaHemi{1} = saHemi{1}(order, :);
+newSaHemi{2} = saHemi{2}(order, :);
+
+dispTx(sprintf('Order of the subjects : %s', mat2str(order)))
+
+% compute left order:
+% [reOrderLeft, orderLeft]   = sort(saHemi{1}(:, 1));
+% [reOrderRight, orderRight] = sort(saHemi{2}(:, 1));
+%
+% newSaLeft  = saHemi{1}(orderLeft, :);
+% newSaRight = saHemi{2}(orderRight, :);
+newSaLeft  = saHemi{1};
+newSaRight = saHemi{2};
+
+
+
+%% plotting
+
+fh = figure; clf
+
+subplot_tight(3, 3, 1, 0.1)
+for subj = 1 : nSubj
+    plot(subj, newSaHemi{1}(subj, 1), '.', 'markersize', 45, 'color', cJet(subj, :)), hold on
+    plot(subj, newSaHemi{2}(subj, 1), 'o', 'markerSize', 12, 'color', cJet(subj, :), 'markerFaceColor', 'w');
+end
+axis tight, box off,
+set(gca, 'xtick', 1 : nSubj, 'xticklabel', 1 : nSubj, 'xgrid', 'on')
+xlim([0.5, nSubj + 0.5]), ylim([400, 1300])
+xlabel('subject'), ylabel('Area (mm2)')
+set(gca, 'ytick', 0 : 200 : 1500), title(roiList{1})
+
+for k = 2 : nRoi
+    subplot_tight(3, 3, k, 0.1)
+    for subj = 1 : nSubj
+        
+        h = scatter(newSaLeft(subj, 1), newSaLeft(subj, k), 150); hold on
+        h.MarkerFaceColor = 'b';
+        h.MarkerEdgeColor = 'k';
+        h.LineWidth = 1;
+        h1 = scatter(newSaRight(subj, 1) + 1000, newSaRight(subj, k), 150);
+        h1.MarkerFaceColor = 'r';
+        h1.MarkerEdgeColor =  'k';
+        h1.LineWidth = 1;
+    end
+    
+    minNum = min([newSaLeft(:, k); newSaRight(:, k)]);
+    maxNum = max([newSaLeft(:, k); newSaRight(:, k)]);
+    xlim([400, 2400]), ylim([0, maxNum])
+    
+    l = line([1400, 1400], [0, maxNum]);
+    l.LineStyle = ':';
+    l.LineWidth = 2;
+    l.Color     = 'k';
+    
+    t1 = text(450, 30, 'LEFT'); t2 = text(2000, 30, 'RIGHT');
+    t1.Color = [.6, .6, .6];
+    t2.Color = t1.Color;
+    
+    title(roiList{k}),
+    xlabel('V1 size (mm2)'), ylabel(sprintf('%s size (mm2)', roiList{k}))
+    set(gca, 'xtick', 400 : 400 : 2400, 'xticklabel', [400 : 400 : 1200, 400 : 400 : 1200])
+end
+
+% % within subject surface area comparison
+sa = newSaHemi{1} + newSaHemi{2};
+
+% within-subject surface area comparison
+subplot_tight(3, 3, 8 : 9, 0.1)
+for k = 1 : nSubj
+    plot(sa(k, :), '.:', 'color', cJet(k, :), 'markerSize', 45), hold on
+    plot(sa(k, :), 'o:', 'color', cJet(k, :).*0.7, 'markerSize', 12),
+end
+box off, xlim([0, nRoi + 1]),
+set(gca, 'xtick', 1 : nRoi, 'xtickLabel', roiList, 'xgrid', 'on')
+title('Area (Left + Right) per Subject')
+ylabel('Area (mm2)'), ylim([0, max(sa(:))])
+
+%% Second plot options
+
+
+fh1 = figure; clf
+
+subplot_tight(3, 3, 1, 0.1)
+for subj = 1 : nSubj
+    plot(subj, newSaHemi{1}(subj, 1), '.', 'markersize', 45, 'color', cJet(subj, :)), hold on
+    plot(subj, newSaHemi{2}(subj, 1), 'o', 'markerSize', 12, 'color', cJet(subj, :), 'markerFaceColor', 'w');
+end
+axis tight, box off,
+set(gca, 'xtick', 1 : nSubj, 'xticklabel', 1 : nSubj, 'xgrid', 'on')
+xlim([0.5, nSubj + 0.5]), ylim([400, 1300])
+xlabel('subject'), ylabel('Area (mm2)')
+set(gca, 'ytick', 0 : 200 : 1500), title(roiList{1})
+
+for k = 2 : nRoi
+    subplot_tight(3, 3, k, 0.1)
+    for subj = 1 : nSubj
+        
+        h = scatter(newSaHemi{1}(subj, 1), newSaHemi{1}(subj, k), 150); hold on
+        h.MarkerFaceColor = 'b';
+        h.MarkerEdgeColor = 'k';
+        h.LineWidth = 1;
+        h1 = scatter(newSaHemi{2}(subj, 1), newSaHemi{2}(subj, k), 150);
+        h1.MarkerFaceColor = 'r';
+        h1.MarkerEdgeColor =  'k';
+        h1.LineWidth = 1;
+    end
+    
+    minNum = min([newSaHemi{1}(:, k); newSaHemi{2}(:, k)]);
+    maxNum = max([newSaHemi{1}(:, k); newSaHemi{2}(:, k)]);
+    xlim([400, 1400]), ylim([minNum - 10, maxNum]),
+    title(roiList{k}),
+    xlabel('V1 size (mm2)'), ylabel(sprintf('%s size (mm2)', roiList{k}))
+    set(gca, 'xtick', 400 : 200 : 1400 ),
+end
+
+% % within subject surface area comparison
+sa = newSaHemi{1} + newSaHemi{2};
+
+% within-subject surface area comparison
+subplot_tight(3, 3, 8 : 9, 0.1)
+for k = 1 : nSubj
+    plot(sa(k, :), '.:', 'color', cJet(k, :), 'markerSize', 45), hold on
+    plot(sa(k, :), 'o:', 'color', cJet(k, :).*0.7, 'markerSize', 12),
+end
+box off, xlim([0, nRoi + 1]),
+set(gca, 'xtick', 1 : nRoi, 'xtickLabel', roiList, 'xgrid', 'on')
+title('Area (Left + Right) per Subject')
+ylabel('Area (mm2)'), ylim([0, max(sa(:))])
+
+%% save figures
+
+imgLoc = fullfile(prjLoc, 'figures');
+%
+saveFigures(fh, imgLoc, 'temporalSubjectV1toVnSizes1', 'eps', [1000, 800])
+saveFigures(fh1, imgLoc, 'temporalSubjectV1toVnSizes2', 'eps', [1000, 800])

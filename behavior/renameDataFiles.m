@@ -1,27 +1,23 @@
-% re-name all the data files in the data folder
 
-subjList = {'JB', 'JYZ', 'NC', 'HY'};
-subjNum  = [23, 14, 10, 36];
-nSubj    = length(subjList);
-subjID   = {};
+function [] = renameDataFiles()
 
-% create subject ID:
-for k = 1 : nSubj
-    subjID{k} = sprintf('wl_subj0%d', subjNum(k));
-end
 
 %% paths
 
-prjDir  = fullfile('/Volumes', 'server', 'Projects', 'crowdingAnatomy');
-datDir  = fullfile(prjDir, 'data', 'raw');
-current = pwd;
+[prjDir, datDir, codeDir] = crowdingAnatPth;
 
+current = pwd;
 cd(datDir)
+
+%% re-name all the data files in the data folder
+
+[subjID, subjInit] = subjectList;
+nSubj              = length(subjID);
 
 %% create data file name
 
 for iSub = 1 : nSubj
-    nameStr = sprintf('*%s*', subjList{iSub});
+    nameStr = sprintf('*%s*', subjInit{iSub});
     matStr  = sprintf('%s.mat', nameStr);
     txtStr  = sprintf('%s.txt', nameStr);
     
@@ -58,10 +54,12 @@ for iSub = 1 : nSubj
         % rename the current file
         movefile(file{k}, newMatName);
         movefile(txt{k},  newTextName);
-       
     end
 end
 
 %% go back to original directory
 
 cd(current)
+
+%%
+end

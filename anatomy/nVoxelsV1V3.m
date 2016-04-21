@@ -10,6 +10,7 @@ roiList  = {'V1', 'V2', 'V3'};
 
 %% paths and directories
 
+current = pwd;
 if ~exist('temporalUtils'),
     temporalUtils = fullfile('/Volumes', 'server', 'Projects', 'Temporal integration', 'temporalUtils');
     addpath(genpath(temporalUtils))
@@ -128,5 +129,7 @@ ylabel('Area (mm2)'), ylim([0, max(sa(:)) + 400]),
 %% save figures
 
 imgLoc = fullfile(prjtLoc, 'figures');
-
 saveFigures(fh, imgLoc, 'temporalSubjectV1V2V3Sizes', 'eps', [1200, 400])
+
+%%
+cd(current)

@@ -1,4 +1,3 @@
-% create subject ID
 function subjID = createSubjID(subjNum)
 
 % function subjID = createSubjID(subjNum)

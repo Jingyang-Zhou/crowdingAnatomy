@@ -1,4 +1,5 @@
-% analyzeCAIndividual_wrapper
+function [subjID, datSmry] = analyzeCAIndividual_wrapper
+% function [subjID, datSmry] = analyzeCAIndividual_wrapper
 
 %% load the list of subjects
 
@@ -6,7 +7,7 @@
 
 for k = 1 : length(subjID)
     figure(1), subplot_tight(8, 1, k, 0.02)
-   
+    
     datSmry{k} =  analyzeCrowdingAnatomyIndividual(subjID{k});
     
     title(subjID{k})
@@ -128,6 +129,8 @@ title('right 8 degree tangential')
 set(gca, 'xtick', round(sort(lefthemiv1)))
 ylim([0, 1]),  ylabel('thresh.(deg)')
 xlabel('left V1 size')
+
+end
 
 
 

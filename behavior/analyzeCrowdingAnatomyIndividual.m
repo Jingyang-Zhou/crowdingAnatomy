@@ -101,7 +101,7 @@ for k = 1 : length(files)
         case '8leftradial'
             datSmry.rightRadial8       = run(k).thresh;
             datSmry.rightRadial8sd     = run(k).threshsd;
-            datSmry.mrightRadial8      = cmpMean(k)
+            datSmry.mrightRadial8      = cmpMean(k);
         case '8righttangential'
             datSmry.leftTangential8    = run(k).thresh;
             datSmry.leftTangential8sd  = run(k).threshsd;

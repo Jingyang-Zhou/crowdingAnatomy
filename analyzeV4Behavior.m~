@@ -1,0 +1,140 @@
+% analyze behavior V4 size
+
+%% extract data
+newSaHemi = cell(1, 2);
+
+% extract behavioral data
+[bID, datSmry]              = analyzeCAIndividual_wrapper;
+% extract size data
+[saHemi, subjNums, roiList] = nVoxelsV1Vn;
+
+newSubjNums  = [subjNums(1:3), subjNums(5:6)];
+newSaHemi{1} = [saHemi{1}(1:3, :); saHemi{1}(5:6, :)];
+newSaHemi{2} = [saHemi{2}(1:3, :); saHemi{2}(5:6, :)];
+
+[sbjOrder, sz, cmag]        = loadSizeCmag;
+
+% NOTE: here the order of subjects in behavior is the same as order of
+% subjects in brain data.
+
+%% Secondary variables
+
+% v4idx  = find(ismember(roiList, 'hV4'));
+% v4size = [saHemi{2}(:, v4idx); saHemi{1}(:, v4idx)];
+
+% convert vistasoft order to behavioral order
+for k = 1 : length(newSubjNums)
+    vsID{k} = createSubjID(newSubjNums(k));
+    vs2B(k) = find(ismember(vsID, bID{k}));
+end
+
+for k = 1 : length(roiList)
+    roiSize(k, :) = [newSaHemi{2}(vs2B, k); newSaHemi{1}(vs2B, k)]; % first dimension: roi, second: subject
+end
+
+%% extract behavioral data
+
+radial4      = [];
+radial8      = [];
+fovealRadial = [];
+tangential8  = [];
+
+for k = 1 : length(newSubjNums)
+    
+    fovealRadial(k, :)= [mean(datSmry{k}.centerRadial0), mean(datSmry{k}.centerRadial0)];
+    radial4(k, :)     = [mean(datSmry{k}.leftRadial4), mean(datSmry{k}.rightRadial4)];
+    radial8(k, :)     = [mean(datSmry{k}.leftRadial8), mean(datSmry{k}.rightRadial8)];
+    tangential8(k, :) = [mean(datSmry{k}.leftTangential8), mean(datSmry{k}.rightTangential8)];
+end
+
+fovealRadial = reshape(fovealRadial, [10, 1]);
+radial4      = reshape(radial4, [10, 1]);
+radial8      = reshape(radial8, [10, 1]);
+tangential8  = reshape(tangential8, [10, 1]);
+
+ave8         = mean([radial8, tangential8], 2);
+ave48        = mean([ave8, radial4], 2);
+ave48        = mean([ave48, fovealRadial], 2);
+
+%% figures
+
+figure (1), clf
+for k = 1 : length(roiList)
+    subplot(7, 5, (k-1)*5 + 1)
+    plot(roiSize(k, :), radial4, 'o', 'markerfaceColor', 'r', 'markeredgecolor', 'k'),
+    hold on
+    p = polyfit(roiSize(k, :)', radial4, 1);
+    y1 = polyval(p, roiSize(k, :));
+    plot(roiSize(k, :), y1, 'k:')
+    box off, 
+    txt = sprintf('%s radial 4 dg.', roiList{k});
+    title(txt);
+    
+    subplot(7, 5, (k-1)*5 + 2)
+    plot(roiSize(k, :), radial8,  'o', 'markerfaceColor', 'r', 'markeredgecolor', 'k'),
+    hold on
+    p = polyfit(roiSize(k, :)', radial8, 1);
+    y1 = polyval(p, roiSize(k, :));
+    plot(roiSize(k, :), y1, 'k:')
+    box off,
+    txt = sprintf('%s radial 8 dg.', roiList{k});
+    title(txt);
+    
+    subplot(7, 5, (k-1)*5 + 3)
+    plot(roiSize(k, :), tangential8,  'o', 'markerfaceColor', 'r', 'markeredgecolor', 'k'),
+    hold on
+    p = polyfit(roiSize(k, :)', tangential8, 1);
+    y1 = polyval(p, roiSize(k, :));
+    plot(roiSize(k, :), y1, 'k:')
+    box off, 
+    txt = sprintf('%s tangential 8 dg.', roiList{k});
+    title(txt);
+    
+    subplot(7, 5, (k-1)*5 + 4)
+    plot(roiSize(k, :), ave8,  'o', 'markerfaceColor', 'm', 'markeredgecolor', 'k'),
+    hold on
+    p = polyfit(roiSize(k, :)', ave8, 1);
+    y1 = polyval(p, roiSize(k, :));
+    plot(roiSize(k, :), y1, 'k:')
+    box off, 
+    txt = sprintf('%s ave 8 dg.', roiList{k});
+    title(txt);
+    
+    subplot(7, 5, (k-1)*5 + 5)
+    plot(roiSize(k, :), ave48,  'o', 'markerfaceColor', 'm', 'markeredgecolor', 'k'),
+    hold on
+    p = polyfit(roiSize(k, :)', ave48, 1);
+    y1 = polyval(p, roiSize(k, :));
+    plot(roiSize(k, :), y1, 'k:')
+    box off
+    txt = sprintf('%s ave', roiList{k});
+    title(txt);
+end
+
+
+
+%% Compare template size and vistaSoft size
+
+szdat = sz.dat;
+
+% rename subject ID from behavioral data
+for k = 1 : length(sbjOrder)
+    cID{k} = createSubjID(sbjOrder(k));
+end
+% sort cortical data (CHECK IF LENGTH OF cID IS GREATER THAN THAT OF
+% subjID)
+for k = 1 : length(bID) - 1
+    idx(k) = find(ismember(cID, bID{k}));
+end
+
+%% plot v1 template size versus vistasoft size
+
+
+
+
+
+
+
+
+
+

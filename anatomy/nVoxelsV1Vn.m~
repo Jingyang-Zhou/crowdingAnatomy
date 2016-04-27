@@ -1,4 +1,4 @@
-function [saHemi, subjNums, roiList] = nVoxelsV1Vn()
+function [subjOrder, ]
 
 % nVoxelsV1Vn
 % surface area plot in temporal subjects
@@ -224,6 +224,3 @@ imgLoc = fullfile(prjLoc, 'figures');
 %
 saveFigures(fh, imgLoc, 'temporalSubjectV1toVnSizes1', 'eps', [1000, 800])
 saveFigures(fh1, imgLoc, 'temporalSubjectV1toVnSizes2', 'eps', [1000, 800])
-
-%%
-end
